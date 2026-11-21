@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.Piper" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowBackground">@color/piper_dark</item>
+    </style>
+</resources>
