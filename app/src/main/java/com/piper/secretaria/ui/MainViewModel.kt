@@ -102,6 +102,71 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun canScheduleExact() = piper.scheduler.canScheduleExact()
     fun canNotify() = piper.notifier.canNotify()
 
+    // --- Integrações (agendas do celular: Outlook, Google…) ---
+    val deviceCalendars = piper.deviceCalendars
+    private val _calendars = MutableStateFlow<List<com.piper.secretaria.integrations.DeviceCalendar>>(emptyList())
+    val calendars = _calendars.asStateFlow()
+    private val _syncStatus = MutableStateFlow<String?>(null)
+    val syncStatus = _syncStatus.asStateFlow()
+
+    fun loadCalendars() = viewModelScope.launch { _calendars.value = deviceCalendars.list() }
+
+    fun setCalendarsEnabled(on: Boolean) {
+        piper.settings.update { s ->
+            // Na primeira vez, já marca todas as agendas encontradas
+            val ids = if (on && s.deviceCalendarIds.isEmpty()) _calendars.value.map { it.id }.toSet() else s.deviceCalendarIds
+            s.copy(deviceCalendarsEnabled = on, deviceCalendarIds = ids)
+        }
+        syncCalendars()
+    }
+
+    fun toggleCalendar(id: Long) {
+        piper.settings.update { s -> s.copy(deviceCalendarIds = if (id in s.deviceCalendarIds) s.deviceCalendarIds - id else s.deviceCalendarIds + id) }
+        syncCalendars()
+    }
+
+    fun syncCalendars(silent: Boolean = false) = viewModelScope.launch {
+        if (!silent) _syncStatus.value = "Sincronizando…"
+        val n = runCatching { deviceCalendars.sync() }
+        if (!silent) _syncStatus.value = n.fold({ "$it compromisso(s) sincronizado(s) ✓" }, { "Não consegui ler as agendas do celular." })
+    }
+
+    // --- Atualização do app ---
+    val updater = piper.updater
+    val updateState = updater.state
+
+    /** Pop-up "Atualizar agora / Depois": volta a aparecer sempre que o app é reaberto. */
+    private val _updatePopup = MutableStateFlow(false)
+    val updatePopup = _updatePopup.asStateFlow()
+
+    fun checkUpdateOnOpen() = viewModelScope.launch {
+        val s = updater.checkOnOpen()
+        if (s is com.piper.secretaria.update.UpdateState.Available || s is com.piper.secretaria.update.UpdateState.ReadyToInstall) {
+            _updatePopup.value = true
+        }
+    }
+
+    fun checkUpdateNow() = viewModelScope.launch { updater.check() }
+
+    fun postponeUpdate() { _updatePopup.value = false }
+
+    /** Baixa (se preciso) e abre o instalador; pede antes a permissão de instalar apps. */
+    fun startUpdate() = viewModelScope.launch {
+        _updatePopup.value = false
+        when (val s = updater.state.value) {
+            is com.piper.secretaria.update.UpdateState.Available -> {
+                updater.download(s.info)
+                (updater.state.value as? com.piper.secretaria.update.UpdateState.ReadyToInstall)?.let { installOrAsk(it.file) }
+            }
+            is com.piper.secretaria.update.UpdateState.ReadyToInstall -> installOrAsk(s.file)
+            else -> {}
+        }
+    }
+
+    private fun installOrAsk(file: java.io.File) {
+        if (updater.canInstall()) updater.install(file) else updater.openInstallPermissionSettings()
+    }
+
     override fun onCleared() {
         tts.shutdown()
     }

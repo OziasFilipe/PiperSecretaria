@@ -35,6 +35,10 @@ data class EventEntity(
     val reminderMinutes: Int = 30,
     /** Quando o usuário toca em "Adiar 15 min", o próximo aviso fica guardado aqui. */
     val snoozedUntil: Long? = null,
+    /** Preenchido quando o evento veio de uma agenda externa (Outlook, Google…): "cal:<idEvento>:<início>". */
+    val externalId: String? = null,
+    /** Nome da agenda de origem, ex.: "Outlook · voce@empresa.com". Nulo = criado na Piper. */
+    val source: String? = null,
 ) {
     fun reminderAt(): Long? = snoozedUntil ?: if (reminderMinutes < 0) null else startAt - reminderMinutes * 60_000L
 }

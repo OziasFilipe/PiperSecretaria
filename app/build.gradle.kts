@@ -13,8 +13,15 @@ android {
         applicationId = "com.piper.secretaria"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1"
+
+        // Endereço fixo do arquivo de versão. Por padrão aponta para o update.json da
+        // última Release do GitHub (troque OziasFilipe/PiperSecretaria se usar outro repositório).
+        buildConfigField(
+            "String", "UPDATE_URL",
+            "\"https://github.com/OziasFilipe/PiperSecretaria/releases/latest/download/update.json\"",
+        )
     }
 
     buildTypes {
@@ -32,6 +39,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

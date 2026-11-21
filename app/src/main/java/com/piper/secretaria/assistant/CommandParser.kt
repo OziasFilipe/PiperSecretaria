@@ -31,9 +31,11 @@ object CommandParser {
         val n = normalize(original)
         if (n.isBlank()) return Command.Help
 
-        // Consultas
-        if (Regex("""\b(o que tenho|minha agenda|meus compromissos|resumo|pauta|agenda de (hoje|amanha))\b""").containsMatchIn(n)) {
-            val day = if (n.contains("amanha")) now.toLocalDate().plusDays(1) else now.toLocalDate()
+        // Consultas de agenda: "o que tenho hoje?", "qual minha agenda dia 25?", "compromissos de segunda"
+        val creating = Regex("""^(cri[ae]r?|agenda (um|uma)\b|agend(ar|e)\b|marc[ae]r?|adicion[ae]r?|me lembr|lembr|avis|anot|nova|novo)""").containsMatchIn(n)
+        val asksAgenda = QUERY.containsMatchIn(n) || Regex("""\bagenda (de|do|da|para|pra|na|no)\b""").containsMatchIn(n)
+        if (!creating && asksAgenda) {
+            val day = extractDateTime(n, now).value?.toLocalDate() ?: now.toLocalDate()
             return Command.Summary(day)
         }
         if (Regex("""\b(tarefas pendentes|minhas tarefas|o que falta|quais tarefas|listar tarefas)\b""").containsMatchIn(n)) {
@@ -78,6 +80,10 @@ object CommandParser {
             else -> Command.Help
         }
     }
+
+    private val QUERY = Regex(
+        """\b(o que (eu )?tenho|que (eu )?tenho|qual (e )?(a )?(minha )?agenda|quais (sao )?(os )?(meus )?compromissos|como (esta|ta) (a )?(minha )?agenda|minha agenda|meus compromissos|compromissos (de|do|da|para|pra|na|no|hoje|amanha)|tenho (algo|alguma coisa|(algum |alguma )?(compromisso|reuniao|evento)s?)|o que vou fazer|minha pauta|resumo)\b""",
+    )
 
     data class TimeMatch(val value: LocalDateTime?, val ranges: List<IntRange>)
 

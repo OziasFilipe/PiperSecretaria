@@ -54,13 +54,36 @@ class Assistant(private val repo: PiperRepository, private val settings: Setting
             Command.Help -> HELP
         }
 
+    /** Agenda de um dia: compromissos + tarefas com lembrete naquele dia (hoje inclui as atrasadas/sem data). */
     private suspend fun summary(day: LocalDate, today: LocalDate): String {
         val events = repo.eventsOn(day)
-        val label = if (day == today) "hoje" else "amanhã"
-        val tasks = repo.pendingTasks()
-        val ev = if (events.isEmpty()) "Você não tem compromissos $label."
-        else "Você tem ${events.size} compromisso(s) $label: " + events.joinToString("; ") { "${Dates.hhmm(it.startAt)} ${it.title}" } + "."
-        return if (day == today) "$ev E ${tasks.size} tarefa(s) pendente(s)." else ev
+        val pending = repo.pendingTasks()
+        val start = Dates.startOfDay(day)
+        val end = Dates.startOfDay(day.plusDays(1))
+        val dayTasks = pending.filter { t ->
+            val at = t.remindAt
+            if (day == today) at == null || at < end else at != null && at >= start && at < end
+        }.sortedBy { it.remindAt ?: Long.MAX_VALUE }
+
+        val label = when (day) {
+            today -> "hoje"
+            today.plusDays(1) -> "amanhã"
+            today.plusDays(2) -> "depois de amanhã"
+            else -> "em ${Dates.longDay(day).lowercase()}"
+        }
+        if (events.isEmpty() && dayTasks.isEmpty()) return "Você não tem nada marcado $label. Agenda livre!"
+
+        val sb = StringBuilder()
+        if (events.isEmpty()) sb.append("Nenhum compromisso $label.")
+        else {
+            sb.append("${label.replaceFirstChar { it.uppercase() }} você tem ${events.size} compromisso${if (events.size > 1) "s" else ""}:")
+            events.forEach { sb.append("\n• ${Dates.hhmm(it.startAt)} ${it.title}") }
+        }
+        if (dayTasks.isNotEmpty()) {
+            sb.append("\nE ${dayTasks.size} tarefa${if (dayTasks.size > 1) "s" else ""}:")
+            dayTasks.take(8).forEach { t -> sb.append("\n• ${t.remindAt?.let { Dates.hhmm(it) + " " } ?: ""}${t.title}") }
+        }
+        return sb.toString()
     }
 
     private fun when_(at: LocalDateTime): String {

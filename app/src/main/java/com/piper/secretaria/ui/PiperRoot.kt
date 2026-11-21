@@ -30,7 +30,7 @@ import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.EditNote
-import androidx.compose.material.icons.filled.EventNote
+import androidx.compose.material.icons.automirrored.filled.EventNote
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notifications
@@ -82,6 +82,12 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.piper.secretaria.data.EventEntity
 import com.piper.secretaria.data.TaskEntity
+import androidx.compose.material3.AlertDialog
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import com.piper.secretaria.update.UpdateState
+import com.piper.secretaria.ui.components.DownloadProgress
+import com.piper.secretaria.ui.components.UpdateDialog
 import com.piper.secretaria.ui.components.EventEditorSheet
 import com.piper.secretaria.ui.components.FluteMascot
 import com.piper.secretaria.ui.components.IconBadge
@@ -210,6 +216,30 @@ fun PiperRoot(vm: MainViewModel, deepLink: DeepLink?, onDeepLinkHandled: () -> U
                 composable(Routes.SETTINGS) { SettingsScreen(vm, actions) }
             }
         }
+    }
+
+    // Atualização: verifica toda vez que o app volta para a frente; o pop-up reaparece até atualizar.
+    LifecycleEventEffect(Lifecycle.Event.ON_START) {
+        vm.checkUpdateOnOpen()
+        if (settings.deviceCalendarsEnabled) vm.syncCalendars(silent = true)
+    }
+    val updateState by vm.updateState.collectAsStateWithLifecycle()
+    val updatePopup by vm.updatePopup.collectAsStateWithLifecycle()
+    val pendingInfo = when (val s = updateState) {
+        is UpdateState.Available -> s.info
+        is UpdateState.ReadyToInstall -> s.info
+        else -> null
+    }
+    if (updatePopup && pendingInfo != null) {
+        UpdateDialog(pendingInfo, vm.updater.currentVersion, onUpdate = { vm.startUpdate() }, onLater = { vm.postponeUpdate() })
+    }
+    (updateState as? UpdateState.Downloading)?.let { d ->
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("Atualizando para ${d.info.versionName}") },
+            text = { DownloadProgress(d.progress) },
+            confirmButton = {},
+        )
     }
 
     if (taskEditorOpen) TaskEditorSheet(
@@ -353,7 +383,7 @@ private fun QuickActionsSheet(onDismiss: () -> Unit, onAction: (QuickAction) -> 
                 Triple(QuickAction.REMINDER, "Definir lembrete", Icons.Default.NotificationsActive to PiperColors.Orange),
                 Triple(QuickAction.NOTE, "Anotar ideia", Icons.Default.EditNote to PiperColors.Blue),
                 Triple(QuickAction.SUMMARY, "Resumo do dia", Icons.Default.BarChart to PiperColors.Purple),
-                Triple(QuickAction.WEEK, "Planejar semana", Icons.Default.EventNote to PiperColors.Pink),
+                Triple(QuickAction.WEEK, "Planejar semana", Icons.AutoMirrored.Filled.EventNote to PiperColors.Pink),
             )
             FlowRow(
                 Modifier.fillMaxWidth(),

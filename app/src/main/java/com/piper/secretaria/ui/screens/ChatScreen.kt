@@ -38,7 +38,7 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.NotificationsActive
-import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Icon
@@ -112,7 +112,7 @@ fun ChatScreen(vm: MainViewModel, actions: AppActions, autoListen: Boolean) {
     Scaffold(
         topBar = {
             PiperTopBar("Conversar com a Piper", Icons.AutoMirrored.Filled.Chat, onBack = actions.back, actions = {
-                if (speaking) IconButton(onClick = vm::stopSpeaking) { Icon(Icons.Default.VolumeOff, "Silenciar") }
+                if (speaking) IconButton(onClick = vm::stopSpeaking) { Icon(Icons.AutoMirrored.Filled.VolumeOff, "Silenciar") }
             })
         },
         containerColor = MaterialTheme.colorScheme.background,

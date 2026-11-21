@@ -13,6 +13,10 @@ data class PiperSettings(
     val dailySummaryMinute: Int = 0,
     val voiceReplies: Boolean = true,
     val onboarded: Boolean = false,
+    /** Integração com as agendas do celular (Outlook, Google, Samsung…). */
+    val deviceCalendarsEnabled: Boolean = false,
+    val deviceCalendarIds: Set<Long> = emptySet(),
+    val lastCalendarSync: Long = 0,
 )
 
 /** Preferências simples guardadas em SharedPreferences e expostas como StateFlow. */
@@ -30,6 +34,9 @@ class SettingsStore(context: Context) {
         dailySummaryMinute = prefs.getInt("dailySummaryMinute", 0),
         voiceReplies = prefs.getBoolean("voiceReplies", true),
         onboarded = prefs.getBoolean("onboarded", false),
+        deviceCalendarsEnabled = prefs.getBoolean("deviceCalendarsEnabled", false),
+        deviceCalendarIds = prefs.getStringSet("deviceCalendarIds", emptySet()).orEmpty().mapNotNull { it.toLongOrNull() }.toSet(),
+        lastCalendarSync = prefs.getLong("lastCalendarSync", 0),
     )
 
     fun update(transform: (PiperSettings) -> PiperSettings) {
@@ -42,6 +49,9 @@ class SettingsStore(context: Context) {
             .putInt("dailySummaryMinute", s.dailySummaryMinute)
             .putBoolean("voiceReplies", s.voiceReplies)
             .putBoolean("onboarded", s.onboarded)
+            .putBoolean("deviceCalendarsEnabled", s.deviceCalendarsEnabled)
+            .putStringSet("deviceCalendarIds", s.deviceCalendarIds.map { it.toString() }.toSet())
+            .putLong("lastCalendarSync", s.lastCalendarSync)
             .apply()
         _state.value = s
     }

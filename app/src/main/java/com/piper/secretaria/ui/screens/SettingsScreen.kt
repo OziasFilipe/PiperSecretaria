@@ -61,6 +61,19 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.piper.secretaria.ui.AppActions
 import com.piper.secretaria.ui.MainViewModel
+import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.filled.Hub
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.Checkbox
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.LaunchedEffect
+import com.piper.secretaria.util.Dates
+import com.piper.secretaria.update.UpdateState
+import com.piper.secretaria.ui.components.DownloadProgress
 import com.piper.secretaria.ui.components.GradientButton
 import com.piper.secretaria.ui.components.PiperTopBar
 import com.piper.secretaria.ui.components.SoftCard
@@ -80,6 +93,15 @@ fun SettingsScreen(vm: MainViewModel, actions: AppActions) {
     }
     val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refresh++ }
 
+    val updateState by vm.updateState.collectAsStateWithLifecycle()
+    val calendars by vm.calendars.collectAsStateWithLifecycle()
+    val syncStatus by vm.syncStatus.collectAsStateWithLifecycle()
+    val canReadCalendar = remember(refresh) { vm.deviceCalendars.hasPermission() }
+    val calendarPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        refresh++
+        if (granted) vm.loadCalendars()
+    }
+    LaunchedEffect(canReadCalendar) { if (canReadCalendar) vm.loadCalendars() }
     var editName by remember { mutableStateOf(false) }
     var pickSummaryTime by remember { mutableStateOf(false) }
 
@@ -165,6 +187,115 @@ fun SettingsScreen(vm: MainViewModel, actions: AppActions) {
                             )
                         }
                         Switch(settings.dailySummaryEnabled, { on -> vm.updateSettings { it.copy(dailySummaryEnabled = on) } })
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            Text("Integrações", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
+            SoftCard {
+                Column(Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Hub, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Outlook, Google e outras agendas", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "A Piper lê as agendas das contas do seu celular e te avisa dos compromissos.",
+                                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(
+                            settings.deviceCalendarsEnabled && canReadCalendar,
+                            { on ->
+                                if (on && !canReadCalendar) calendarPermission.launch(Manifest.permission.READ_CALENDAR)
+                                else vm.setCalendarsEnabled(on)
+                            },
+                        )
+                    }
+                    if (canReadCalendar && !settings.deviceCalendarsEnabled && calendars.isNotEmpty()) {
+                        TextButton(onClick = { vm.setCalendarsEnabled(true) }) { Text("Ativar com ${calendars.size} agenda(s) encontrada(s)") }
+                    }
+                    if (settings.deviceCalendarsEnabled && canReadCalendar) {
+                        Spacer(Modifier.height(8.dp))
+                        if (calendars.isEmpty()) {
+                            Text("Nenhuma agenda encontrada no celular.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        calendars.forEach { cal ->
+                            Row(
+                                Modifier.fillMaxWidth().clickable { vm.toggleCalendar(cal.id) },
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Checkbox(cal.id in settings.deviceCalendarIds, { vm.toggleCalendar(cal.id) })
+                                androidx.compose.foundation.layout.Box(Modifier.size(10.dp).clip(CircleShape).background(Color(cal.color or 0xFF000000.toInt())))
+                                Spacer(Modifier.width(8.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text("${cal.provider} · ${cal.name}", style = MaterialTheme.typography.bodyLarge)
+                                    if (cal.account.isNotBlank() && cal.account != cal.name) Text(
+                                        cal.account, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                syncStatus ?: if (settings.lastCalendarSync > 0) "Última sincronização: ${Dates.relative(settings.lastCalendarSync)}" else "",
+                                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f),
+                            )
+                            TextButton(onClick = { vm.syncCalendars() }) {
+                                Icon(Icons.Default.Sync, null)
+                                Spacer(Modifier.width(4.dp))
+                                Text("Sincronizar")
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Outlook: instale o app Microsoft Outlook no celular, entre na sua conta e ative \"Sincronizar calendários\" " +
+                            "nas configurações da conta. Google: a agenda da conta Google do celular já aparece aqui.",
+                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            Text("Atualizações", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
+            SoftCard {
+                Column(Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.SystemUpdate, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Versão ${vm.updater.currentVersion}", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                when (val s = updateState) {
+                                    UpdateState.Idle -> "Toque em verificar para buscar novidades"
+                                    UpdateState.Checking -> "Verificando…"
+                                    UpdateState.UpToDate -> "Você já está na versão mais nova ✓"
+                                    is UpdateState.Available -> "Versão ${s.info.versionName} disponível!"
+                                    is UpdateState.Downloading -> "Baixando a versão ${s.info.versionName}…"
+                                    is UpdateState.ReadyToInstall -> "Versão ${s.info.versionName} pronta para instalar"
+                                    is UpdateState.Error -> s.message
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (updateState is UpdateState.Error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    (updateState as? UpdateState.Downloading)?.let {
+                        Spacer(Modifier.height(12.dp))
+                        DownloadProgress(it.progress)
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    val hasUpdate = updateState is UpdateState.Available || updateState is UpdateState.ReadyToInstall
+                    GradientButton(
+                        if (hasUpdate) "Atualizar agora" else "Verificar atualização",
+                        icon = Icons.Default.SystemUpdate,
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                    ) {
+                        when {
+                            hasUpdate -> vm.startUpdate()
+                            updateState !is UpdateState.Checking && updateState !is UpdateState.Downloading -> vm.checkUpdateNow()
+                        }
                     }
                 }
             }

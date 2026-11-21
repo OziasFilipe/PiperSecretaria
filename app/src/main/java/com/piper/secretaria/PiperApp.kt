@@ -18,6 +18,8 @@ class PiperApp : Application() {
     val scheduler by lazy { ReminderScheduler(this, settings) }
     val repository by lazy { PiperRepository(database, scheduler) }
     val notifier by lazy { Notifier(this) }
+    val deviceCalendars by lazy { com.piper.secretaria.integrations.DeviceCalendars(this, repository, settings) }
+    val updater by lazy { com.piper.secretaria.update.Updater(this) }
 
     override fun onCreate() {
         super.onCreate()

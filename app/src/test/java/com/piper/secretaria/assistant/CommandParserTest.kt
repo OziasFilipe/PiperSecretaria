@@ -45,6 +45,26 @@ class CommandParserTest {
         assertEquals(Command.Summary(LocalDate.of(2026, 11, 22)), c)
     }
 
+    @Test fun agendaOnDay25() {
+        assertEquals(Command.Summary(LocalDate.of(2026, 11, 25)), CommandParser.parse("Qual minha agenda dia 25?", now))
+        assertEquals(Command.Summary(LocalDate.of(2026, 11, 25)), CommandParser.parse("o que tenho em 25/11", now))
+    }
+
+    @Test fun agendaOnWeekday() {
+        assertEquals(Command.Summary(LocalDate.of(2026, 11, 23)), CommandParser.parse("quais compromissos tenho na segunda?", now))
+        assertEquals(Command.Summary(LocalDate.of(2026, 11, 23)), CommandParser.parse("agenda de segunda-feira", now))
+    }
+
+    @Test fun agendaTodayAndDayAfter() {
+        assertEquals(Command.Summary(LocalDate.of(2026, 11, 21)), CommandParser.parse("qual agenda tenho hoje", now))
+        assertEquals(Command.Summary(LocalDate.of(2026, 11, 23)), CommandParser.parse("O que tenho depois de amanhã?", now))
+        assertEquals(Command.Summary(LocalDate.of(2026, 11, 21)), CommandParser.parse("tenho alguma reunião?", now))
+    }
+
+    @Test fun agendarIsNotAQuery() {
+        assertTrue(CommandParser.parse("agenda uma reunião amanhã às 10h", now) is Command.CreateEvent)
+    }
+
     @Test fun note() {
         val c = CommandParser.parse("Anota ideia: app de recibos", now) as Command.AddNote
         assertEquals("App de recibos", c.text)

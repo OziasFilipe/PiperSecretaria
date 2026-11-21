@@ -40,6 +40,9 @@ interface EventDao {
     @Query("SELECT * FROM events WHERE startAt > :now OR (snoozedUntil IS NOT NULL AND snoozedUntil > :now)")
     suspend fun upcoming(now: Long): List<EventEntity>
 
+    @Query("SELECT * FROM events WHERE externalId IS NOT NULL")
+    suspend fun external(): List<EventEntity>
+
     @Insert suspend fun insert(event: EventEntity): Long
     @Update suspend fun update(event: EventEntity)
     @Delete suspend fun delete(event: EventEntity)

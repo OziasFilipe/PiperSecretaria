@@ -154,6 +154,9 @@ private fun EventCard(e: EventEntity, onClick: () -> Unit) {
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2, overflow = TextOverflow.Ellipsis,
                     )
+                    if (e.source != null) Text(
+                        e.source, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.secondary,
+                    )
                     if (e.reminderMinutes >= 0) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.NotificationsActive, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
