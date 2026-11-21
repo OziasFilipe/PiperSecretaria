@@ -132,7 +132,7 @@ fun IconBadge(icon: ImageVector, tint: Color, modifier: Modifier = Modifier, siz
 @Composable
 fun EmptyState(text: String, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        FluteMascot(Modifier.size(120.dp))
+        FluteMascot(Modifier.size(120.dp), avatar = true)
         Spacer(Modifier.height(8.dp))
         Text(
             text, style = MaterialTheme.typography.bodyMedium,

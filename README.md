@@ -32,6 +32,16 @@ Testes do interpretador de comandos: `gradlew.bat testDebugUnitTest`.
 - Em Configurações há o status das permissões (notificações, alarmes exatos, economia de bateria) e um botão **Testar notificação**.
   Em celulares Xiaomi/Samsung/Motorola, deixe a Piper como "Sem restrição" de bateria para não perder avisos.
 
+## Piper inteligente (1.2)
+- **Painel web** (`painel-web/`, para a Vercel): login, usuários, conversa com o ChatGPT e memória. Veja `painel-web/README.md`.
+- **Login no app**: na primeira abertura, entre com o endereço do painel, usuário e senha; a sessão fica salva.
+  Dá para usar sem conta (modo offline).
+- **ChatGPT**: com a conta conectada, a Piper conversa de forma livre, agenda, cria tarefas, conclui, anota e
+  responde dúvidas sobre o app, sempre olhando sua agenda real.
+- **Memória**: ela aprende com você ("lembre que...", "quando eu disser X, responda Y", "pode me chamar de...") e com
+  a sua rotina. Sem internet, usa essa memória para responder. Veja/apague em Configurações › Memória da Piper.
+- **Mascote**: a Piper maga (chapéu, capa e botas) acena, pisca, fala, pula e solta faíscas ao toque e comemora tarefas concluídas.
+
 ## Integrações (Outlook, Google e outras agendas)
 Em **Configurações › Integrações**, ligue "Outlook, Google e outras agendas". A Piper lê (só leitura) as agendas
 das contas do celular, importa os compromissos dos próximos 60 dias e passa a avisar deles. Sincroniza ao abrir o app.
@@ -62,6 +72,7 @@ app/src/main/java/com/piper/secretaria/
   data/        Room (tarefas, eventos, notas, histórico) + preferências
   reminders/   AlarmManager, receptores (disparo, adiar, concluir, boot) e notificações
   assistant/   interpretador de comandos em pt-BR (offline) e respostas
+  cloud/       conexão com o painel web (login, ChatGPT, memória)
   update/      verificação, download e instalação de novas versões
   ui/          tema roxo, mascote (FluteMascot), telas e navegação
 ```

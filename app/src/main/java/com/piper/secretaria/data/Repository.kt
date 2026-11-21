@@ -13,6 +13,14 @@ class PiperRepository(
     val events = db.events().observeAll()
     val notes = db.notes().observeAll()
     val notifications = db.notifications().observeAll()
+    val memories = db.memories().observeAll()
+
+    suspend fun allMemories() = db.memories().all()
+    suspend fun addMemory(m: MemoryEntity) = db.memories().insert(m)
+    suspend fun deleteMemory(m: MemoryEntity) = db.memories().delete(m)
+    suspend fun clearMemories() = db.memories().clear()
+    suspend fun allTasks() = db.tasks().all()
+    suspend fun upcomingEvents(from: Long, to: Long) = db.events().between(from, to)
 
     suspend fun saveTask(task: TaskEntity): TaskEntity {
         val saved = if (task.id == 0L) task.copy(id = db.tasks().insert(task)) else task.also { db.tasks().update(it) }

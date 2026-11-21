@@ -115,6 +115,8 @@ object Routes {
     const val NOTIFICATIONS = "notifications"
     const val NOTES = "notes"
     const val SETTINGS = "settings"
+    const val MEMORY = "memory"
+    const val LOGIN = "login"
 }
 
 /** Ações compartilhadas entre as telas (abrir editores, navegar). */
@@ -190,6 +192,12 @@ fun PiperRoot(vm: MainViewModel, deepLink: DeepLink?, onDeepLinkHandled: () -> U
     val backStack by nav.currentBackStackEntryAsState()
     val current = backStack?.destination?.route?.substringBefore("?") ?: Routes.HOME
 
+    // Primeira vez: tela de login (ou "usar sem conta"). Depois a sessão fica salva.
+    if (!settings.loggedIn && !settings.offlineMode) {
+        com.piper.secretaria.ui.screens.LoginScreen(vm, onBack = null)
+        return
+    }
+
     ModalNavigationDrawer(
         drawerState = drawer,
         drawerContent = {
@@ -214,6 +222,8 @@ fun PiperRoot(vm: MainViewModel, deepLink: DeepLink?, onDeepLinkHandled: () -> U
                 composable(Routes.NOTIFICATIONS) { NotificationsScreen(vm, actions) }
                 composable(Routes.NOTES) { NotesScreen(vm, actions) }
                 composable(Routes.SETTINGS) { SettingsScreen(vm, actions) }
+                composable(Routes.MEMORY) { com.piper.secretaria.ui.screens.MemoryScreen(vm, actions) }
+                composable(Routes.LOGIN) { com.piper.secretaria.ui.screens.LoginScreen(vm, onBack = actions.back) }
             }
         }
     }
@@ -221,6 +231,7 @@ fun PiperRoot(vm: MainViewModel, deepLink: DeepLink?, onDeepLinkHandled: () -> U
     // Atualização: verifica toda vez que o app volta para a frente; o pop-up reaparece até atualizar.
     LifecycleEventEffect(Lifecycle.Event.ON_START) {
         vm.checkUpdateOnOpen()
+        vm.syncCloud()
         if (settings.deviceCalendarsEnabled) vm.syncCalendars(silent = true)
     }
     val updateState by vm.updateState.collectAsStateWithLifecycle()
@@ -328,7 +339,7 @@ private fun androidx.compose.foundation.layout.RowScope.BottomItem(
 private fun PiperDrawer(current: String, onSelect: (String) -> Unit) {
     ModalDrawerSheet(drawerContainerColor = PiperColors.Night, drawerContentColor = Color.White) {
         Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-            FluteMascot(Modifier.size(64.dp))
+            FluteMascot(Modifier.size(64.dp), avatar = true)
             Spacer(Modifier.width(12.dp))
             Column {
                 Text("Piper", style = MaterialTheme.typography.headlineSmall, color = Color.White)

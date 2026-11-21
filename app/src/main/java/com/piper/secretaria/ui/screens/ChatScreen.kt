@@ -77,6 +77,9 @@ fun ChatScreen(vm: MainViewModel, actions: AppActions, autoListen: Boolean) {
     val context = LocalContext.current
     val chat by vm.chat.collectAsStateWithLifecycle()
     val speaking by vm.speaking.collectAsStateWithLifecycle()
+    val thinking by vm.thinking.collectAsStateWithLifecycle()
+    val celebrations by vm.celebrations.collectAsStateWithLifecycle()
+    val settings by vm.settings.collectAsStateWithLifecycle()
     var listening by rememberSaveable { mutableStateOf(false) }
     var input by rememberSaveable { mutableStateOf("") }
     var autoListenDone by rememberSaveable { mutableStateOf(false) }
@@ -123,12 +126,17 @@ fun ChatScreen(vm: MainViewModel, actions: AppActions, autoListen: Boolean) {
                 Modifier.fillMaxWidth().animateContentSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                FluteMascot(Modifier.size(if (compact) 96.dp else 170.dp), talking = speaking, listening = listening)
+                FluteMascot(
+                    Modifier.size(if (compact) 96.dp else 190.dp), talking = speaking || thinking, listening = listening,
+                    celebrate = celebrations, avatar = compact,
+                )
                 SoundWave(active = listening || speaking, barCount = if (compact) 16 else 24)
                 Text(
                     when {
                         listening -> "Pode falar, estou ouvindo…"
+                        thinking -> "Pensando…"
                         speaking -> "Falando…"
+                        settings.loggedIn && settings.chatGptEnabled -> "Conectada ao ChatGPT · toque no microfone ou digite"
                         else -> "Toque no microfone ou digite"
                     },
                     style = MaterialTheme.typography.bodyLarge,

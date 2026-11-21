@@ -17,7 +17,16 @@ data class PiperSettings(
     val deviceCalendarsEnabled: Boolean = false,
     val deviceCalendarIds: Set<Long> = emptySet(),
     val lastCalendarSync: Long = 0,
-)
+    /** Conta no painel web (sessão salva depois do primeiro login). */
+    val panelUrl: String = "",
+    val sessionToken: String = "",
+    val accountUser: String = "",
+    val chatGptEnabled: Boolean = false,
+    /** O usuário escolheu usar sem conta (não mostra o login de novo). */
+    val offlineMode: Boolean = false,
+) {
+    val loggedIn: Boolean get() = sessionToken.isNotBlank() && panelUrl.isNotBlank()
+}
 
 /** Preferências simples guardadas em SharedPreferences e expostas como StateFlow. */
 class SettingsStore(context: Context) {
@@ -37,6 +46,11 @@ class SettingsStore(context: Context) {
         deviceCalendarsEnabled = prefs.getBoolean("deviceCalendarsEnabled", false),
         deviceCalendarIds = prefs.getStringSet("deviceCalendarIds", emptySet()).orEmpty().mapNotNull { it.toLongOrNull() }.toSet(),
         lastCalendarSync = prefs.getLong("lastCalendarSync", 0),
+        panelUrl = prefs.getString("panelUrl", com.piper.secretaria.BuildConfig.PANEL_URL) ?: "",
+        sessionToken = prefs.getString("sessionToken", "") ?: "",
+        accountUser = prefs.getString("accountUser", "") ?: "",
+        chatGptEnabled = prefs.getBoolean("chatGptEnabled", false),
+        offlineMode = prefs.getBoolean("offlineMode", false),
     )
 
     fun update(transform: (PiperSettings) -> PiperSettings) {
@@ -52,6 +66,11 @@ class SettingsStore(context: Context) {
             .putBoolean("deviceCalendarsEnabled", s.deviceCalendarsEnabled)
             .putStringSet("deviceCalendarIds", s.deviceCalendarIds.map { it.toString() }.toSet())
             .putLong("lastCalendarSync", s.lastCalendarSync)
+            .putString("panelUrl", s.panelUrl)
+            .putString("sessionToken", s.sessionToken)
+            .putString("accountUser", s.accountUser)
+            .putBoolean("chatGptEnabled", s.chatGptEnabled)
+            .putBoolean("offlineMode", s.offlineMode)
             .apply()
         _state.value = s
     }

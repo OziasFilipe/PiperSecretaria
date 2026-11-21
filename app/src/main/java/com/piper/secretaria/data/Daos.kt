@@ -21,6 +21,9 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE done = 0")
     suspend fun pending(): List<TaskEntity>
 
+    @Query("SELECT * FROM tasks ORDER BY done ASC, createdAt DESC LIMIT 200")
+    suspend fun all(): List<TaskEntity>
+
     @Insert suspend fun insert(task: TaskEntity): Long
     @Update suspend fun update(task: TaskEntity)
     @Delete suspend fun delete(task: TaskEntity)
@@ -68,5 +71,20 @@ interface NotificationDao {
     suspend fun markAllRead()
 
     @Query("DELETE FROM notifications")
+    suspend fun clear()
+}
+
+@Dao
+interface MemoryDao {
+    @Query("SELECT * FROM memories ORDER BY createdAt DESC")
+    fun observeAll(): Flow<List<MemoryEntity>>
+
+    @Query("SELECT * FROM memories ORDER BY createdAt DESC")
+    suspend fun all(): List<MemoryEntity>
+
+    @Insert suspend fun insert(m: MemoryEntity): Long
+    @Delete suspend fun delete(m: MemoryEntity)
+
+    @Query("DELETE FROM memories")
     suspend fun clear()
 }

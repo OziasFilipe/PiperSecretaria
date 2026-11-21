@@ -25,7 +25,9 @@ data class ChatMessage(val fromUser: Boolean, val text: String, val id: Long = S
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val piper = app.piper
     private val repo = piper.repository
-    private val assistant = Assistant(repo, piper.settings)
+    private val assistant = Assistant(repo, piper.settings, piper.panel).also { a ->
+        a.onMemoryChanged = { pushMemory() }
+    }
 
     private fun <T> kotlinx.coroutines.flow.Flow<List<T>>.state() =
         stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -58,11 +60,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         })
     }
 
+    private val _thinking = MutableStateFlow(false)
+    val thinking = _thinking.asStateFlow()
+
     fun send(text: String, speak: Boolean = settings.value.voiceReplies) {
         if (text.isBlank()) return
+        val history = _chat.value.drop(1).map { it.fromUser to it.text }
         _chat.update { it + ChatMessage(true, text.trim()) }
         viewModelScope.launch {
-            val reply = assistant.handle(text)
+            _thinking.value = true
+            val reply = try { assistant.handle(text, history) } finally { _thinking.value = false }
             _chat.update { it + ChatMessage(false, reply) }
             if (speak) say(reply)
         }
@@ -78,7 +85,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun saveTask(task: TaskEntity) = viewModelScope.launch { repo.saveTask(task) }
-    fun toggleTask(task: TaskEntity) = viewModelScope.launch { repo.toggleTask(task) }
+    /** Aumenta quando uma tarefa é concluída: a Piper comemora. */
+    private val _celebrations = MutableStateFlow(0)
+    val celebrations = _celebrations.asStateFlow()
+
+    fun toggleTask(task: TaskEntity) = viewModelScope.launch {
+        repo.toggleTask(task)
+        if (!task.done) _celebrations.update { it + 1 }
+    }
     fun deleteTask(task: TaskEntity) = viewModelScope.launch { repo.deleteTask(task) }
     fun saveEvent(event: EventEntity) = viewModelScope.launch { repo.saveEvent(event.copy(snoozedUntil = null)) }
     fun deleteEvent(event: EventEntity) = viewModelScope.launch { repo.deleteEvent(event) }
@@ -101,6 +115,87 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun canScheduleExact() = piper.scheduler.canScheduleExact()
     fun canNotify() = piper.notifier.canNotify()
+
+    // --- Conta no painel web + memória ---
+    val memories = repo.memories.state()
+    private val _loginState = MutableStateFlow<String?>(null)
+    val loginState = _loginState.asStateFlow()
+    private val _loggingIn = MutableStateFlow(false)
+    val loggingIn = _loggingIn.asStateFlow()
+
+    fun login(url: String, user: String, password: String) = viewModelScope.launch {
+        _loggingIn.value = true
+        _loginState.value = null
+        try {
+            val base = com.piper.secretaria.cloud.PanelClient.normalizeUrl(url)
+            val r = piper.panel.login(base, user.trim(), password)
+            piper.settings.update {
+                it.copy(
+                    panelUrl = base, sessionToken = r.token, accountUser = r.username, chatGptEnabled = r.chatgpt,
+                    offlineMode = false, userName = it.userName.ifBlank { r.name },
+                )
+            }
+            syncCloud()
+        } catch (e: Exception) {
+            _loginState.value = e.message ?: "Não foi possível entrar."
+        } finally {
+            _loggingIn.value = false
+        }
+    }
+
+    fun useOffline() = piper.settings.update { it.copy(offlineMode = true) }
+
+    fun logout() = viewModelScope.launch {
+        piper.panel.logout()
+        piper.settings.update { it.copy(sessionToken = "", accountUser = "", chatGptEnabled = false, offlineMode = false) }
+    }
+
+    fun deleteMemory(m: com.piper.secretaria.data.MemoryEntity) = viewModelScope.launch { repo.deleteMemory(m); pushMemory() }
+    fun clearMemories() = viewModelScope.launch { repo.clearMemories(); pushMemory() }
+
+    private suspend fun pushMemory() {
+        if (!settings.value.loggedIn) return
+        runCatching {
+            val arr = org.json.JSONArray()
+            repo.allMemories().forEach { m ->
+                arr.put(org.json.JSONObject().put("text", m.text).put("kind", m.kind).put("cue", m.cue ?: org.json.JSONObject.NULL).put("createdAt", m.createdAt))
+            }
+            piper.panel.putMemory(arr)
+        }
+    }
+
+    /**
+     * Ao abrir o app logado: confere a sessão, aplica o que foi combinado no painel web
+     * e junta a memória do painel com a do celular.
+     */
+    fun syncCloud() = viewModelScope.launch {
+        assistant.refreshHabits()
+        if (!settings.value.loggedIn) return@launch
+        try {
+            val me = piper.panel.me()
+            piper.settings.update { it.copy(chatGptEnabled = me.optBoolean("chatgpt")) }
+            val inbox = piper.panel.pullInbox()
+            var applied = 0
+            for (i in 0 until inbox.length()) if (assistant.applyAction(inbox.getJSONObject(i))) applied++
+            if (applied > 0) {
+                repo.log("Painel web", "$applied item(ns) combinados no painel foram aplicados.", com.piper.secretaria.data.NotificationCategory.SISTEMA)
+            }
+            val remote = piper.panel.getMemory()
+            val local = repo.allMemories()
+            val known = local.map { it.text.lowercase() to it.cue }.toSet()
+            for (i in 0 until remote.length()) {
+                val r = remote.getJSONObject(i)
+                val text = r.optString("text")
+                val cue = r.optString("cue").takeIf { it.isNotBlank() && it != "null" }
+                if (text.isNotBlank() && (text.lowercase() to cue) !in known) {
+                    repo.addMemory(com.piper.secretaria.data.MemoryEntity(text = text, kind = r.optString("kind", "FACT"), cue = cue, createdAt = r.optLong("createdAt", System.currentTimeMillis())))
+                }
+            }
+            pushMemory()
+        } catch (e: com.piper.secretaria.cloud.PanelException) {
+            if (e.unauthorized) piper.settings.update { it.copy(sessionToken = "") }
+        }
+    }
 
     // --- Integrações (agendas do celular: Outlook, Google…) ---
     val deviceCalendars = piper.deviceCalendars

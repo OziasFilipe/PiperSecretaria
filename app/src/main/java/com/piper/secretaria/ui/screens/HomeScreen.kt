@@ -62,6 +62,7 @@ fun HomeScreen(vm: MainViewModel, actions: AppActions) {
     val tasks by vm.tasks.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
     val speaking by vm.speaking.collectAsStateWithLifecycle()
+    val celebrations by vm.celebrations.collectAsStateWithLifecycle()
     val today = LocalDate.now()
     val todayEvents = events.filter { Dates.toDate(it.startAt) == today }
     val upcoming = tasks.filter { !it.done }.sortedBy { it.remindAt ?: Long.MAX_VALUE }.take(5)
@@ -87,10 +88,10 @@ fun HomeScreen(vm: MainViewModel, actions: AppActions) {
                     }
                     Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         FluteMascot(
-                            Modifier
-                                .size(150.dp)
-                                .clickable { vm.say("$greeting Como posso te ajudar hoje?".replace("👋", "")) },
+                            Modifier.size(170.dp),
                             talking = speaking,
+                            celebrate = celebrations,
+                            onTap = { vm.say("$greeting Como posso te ajudar hoje?".replace("👋", "")) },
                         )
                         Spacer(Modifier.width(8.dp))
                         Column(

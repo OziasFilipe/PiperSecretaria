@@ -62,3 +62,19 @@ data class NotificationEntity(
     val createdAt: Long = System.currentTimeMillis(),
     val read: Boolean = false,
 )
+
+enum class MemoryKind { FACT, REPLY, HABIT }
+
+/**
+ * O que a Piper aprendeu com o usuário. FACT = fato/preferência; REPLY = resposta ensinada
+ * ("quando eu disser [cue], responda [text]"); HABIT = hábito percebido na agenda.
+ * Nunca guarda senhas ou chaves (filtrado em MemoryBrain).
+ */
+@Entity(tableName = "memories")
+data class MemoryEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val text: String,
+    val kind: String = MemoryKind.FACT.name,
+    val cue: String? = null,
+    val createdAt: Long = System.currentTimeMillis(),
+)

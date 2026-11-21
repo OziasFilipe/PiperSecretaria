@@ -21,7 +21,7 @@ import com.piper.secretaria.update.UpdateInfo
 fun UpdateDialog(info: UpdateInfo, currentVersion: String, onUpdate: () -> Unit, onLater: () -> Unit) {
     AlertDialog(
         onDismissRequest = onLater,
-        icon = { FluteMascot(Modifier.size(72.dp), talking = true) },
+        icon = { FluteMascot(Modifier.size(72.dp), avatar = true, celebrate = 1) },
         title = { Text("Nova versão da Piper!") },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {

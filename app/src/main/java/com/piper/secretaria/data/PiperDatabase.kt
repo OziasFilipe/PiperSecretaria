@@ -20,8 +20,8 @@ class Converters {
 }
 
 @Database(
-    entities = [TaskEntity::class, EventEntity::class, NoteEntity::class, NotificationEntity::class],
-    version = 2,
+    entities = [TaskEntity::class, EventEntity::class, NoteEntity::class, NotificationEntity::class, MemoryEntity::class],
+    version = 3,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -30,11 +30,12 @@ abstract class PiperDatabase : RoomDatabase() {
     abstract fun events(): EventDao
     abstract fun notes(): NoteDao
     abstract fun notifications(): NotificationDao
+    abstract fun memories(): MemoryDao
 
     companion object {
         fun create(context: Context): PiperDatabase =
             Room.databaseBuilder(context, PiperDatabase::class.java, "piper.db")
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
 
         /** 1.1: eventos importados de agendas externas. */
@@ -42,6 +43,16 @@ abstract class PiperDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE events ADD COLUMN externalId TEXT")
                 db.execSQL("ALTER TABLE events ADD COLUMN source TEXT")
+            }
+        }
+
+        /** 1.2: memória da Piper. */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `memories` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`text` TEXT NOT NULL, `kind` TEXT NOT NULL, `cue` TEXT, `createdAt` INTEGER NOT NULL)",
+                )
             }
         }
     }

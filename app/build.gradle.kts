@@ -13,11 +13,13 @@ android {
         applicationId = "com.piper.secretaria"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2"
 
         // Endereço fixo do arquivo de versão. Por padrão aponta para o update.json da
         // última Release do GitHub (troque OziasFilipe/PiperSecretaria se usar outro repositório).
+        // Endereço padrão do painel web (Vercel). Pode ser trocado na tela de login do app.
+        buildConfigField("String", "PANEL_URL", "\"\"")
         buildConfigField(
             "String", "UPDATE_URL",
             "\"https://github.com/OziasFilipe/PiperSecretaria/releases/latest/download/update.json\"",

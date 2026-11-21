@@ -63,6 +63,9 @@ import com.piper.secretaria.ui.AppActions
 import com.piper.secretaria.ui.MainViewModel
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Hub
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.Psychology
+import com.piper.secretaria.ui.Routes
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Checkbox
 import androidx.compose.foundation.background
@@ -116,6 +119,27 @@ fun SettingsScreen(vm: MainViewModel, actions: AppActions) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     SettingRow(Icons.Default.GraphicEq, "Voz da Piper", if (settings.voiceReplies) "Respostas faladas ligadas" else "Só texto") {
                         vm.updateSettings { it.copy(voiceReplies = !it.voiceReplies) }
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            Text("Inteligência", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
+            SoftCard {
+                Column {
+                    SettingRow(
+                        Icons.Default.Cloud, "Conta e ChatGPT",
+                        when {
+                            settings.loggedIn && settings.chatGptEnabled -> "Conectada como ${settings.accountUser} · ChatGPT ligado ✓"
+                            settings.loggedIn -> "Conectada como ${settings.accountUser} · ChatGPT não configurado no painel"
+                            else -> "Toque para entrar no painel web"
+                        },
+                    ) { if (!settings.loggedIn) actions.navigate(Routes.LOGIN) }
+                    if (settings.loggedIn) {
+                        TextButton(onClick = { vm.logout() }, modifier = Modifier.padding(start = 52.dp)) { Text("Sair da conta") }
+                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    SettingRow(Icons.Default.Psychology, "Memória da Piper", "Veja e apague o que ela aprendeu com você") {
+                        actions.navigate(Routes.MEMORY)
                     }
                 }
             }

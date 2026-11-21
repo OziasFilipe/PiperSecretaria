@@ -19,6 +19,9 @@ class PiperApp : Application() {
     val repository by lazy { PiperRepository(database, scheduler) }
     val notifier by lazy { Notifier(this) }
     val deviceCalendars by lazy { com.piper.secretaria.integrations.DeviceCalendars(this, repository, settings) }
+    val panel by lazy {
+        com.piper.secretaria.cloud.PanelClient({ settings.current.panelUrl }, { settings.current.sessionToken })
+    }
     val updater by lazy { com.piper.secretaria.update.Updater(this) }
 
     override fun onCreate() {

@@ -1,6 +1,6 @@
 {
-  "versionCode": 2,
-  "versionName": "1.1",
+  "versionCode": 3,
+  "versionName": "1.2",
   "apkUrl": "https://github.com/OziasFilipe/PiperSecretaria/releases/latest/download/Piper.apk",
-  "notes": "Atualização automática dentro do app, consulta da agenda por data (\"o que tenho dia 25?\") e integração com Outlook, Google e outras agendas do celular."
+  "notes": "Nova Piper maga interativa, login com sessão salva, conversa inteligente com o ChatGPT pelo painel web e memória que aprende com você."
 }
