@@ -42,6 +42,12 @@ Testes do interpretador de comandos: `gradlew.bat testDebugUnitTest`.
   a sua rotina. Sem internet, usa essa memória para responder. Veja/apague em Configurações › Memória da Piper.
 - **Mascote**: a Piper maga (chapéu, capa e botas) acena, pisca, fala, pula e solta faíscas ao toque e comemora tarefas concluídas.
 
+## Painel no navegador com Supabase (1.3)
+- O painel web agora guarda tudo no **Supabase** (antes era Upstash Redis). Passo a passo em `painel-web/README.md`.
+- Com a conta conectada, o app envia a **agenda, as tarefas e as anotações** para o painel sempre que algo muda,
+  e você acompanha tudo pelo navegador (visão geral, agenda, tarefas, anotações).
+- O que você cria, edita ou conclui no painel é aplicado no celular ao abrir o app, ou em até 1 minuto com ele aberto.
+
 ## Integrações (Outlook, Google e outras agendas)
 Em **Configurações › Integrações**, ligue "Outlook, Google e outras agendas". A Piper lê (só leitura) as agendas
 das contas do celular, importa os compromissos dos próximos 60 dias e passa a avisar deles. Sincroniza ao abrir o app.

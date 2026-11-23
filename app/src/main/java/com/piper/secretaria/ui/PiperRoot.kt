@@ -232,8 +232,10 @@ fun PiperRoot(vm: MainViewModel, deepLink: DeepLink?, onDeepLinkHandled: () -> U
     LifecycleEventEffect(Lifecycle.Event.ON_START) {
         vm.checkUpdateOnOpen()
         vm.syncCloud()
+        vm.onForeground()
         if (settings.deviceCalendarsEnabled) vm.syncCalendars(silent = true)
     }
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { vm.onBackground() }
     val updateState by vm.updateState.collectAsStateWithLifecycle()
     val updatePopup by vm.updatePopup.collectAsStateWithLifecycle()
     val pendingInfo = when (val s = updateState) {

@@ -13,8 +13,8 @@ android {
         applicationId = "com.piper.secretaria"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 4
+        versionName = "1.3"
 
         // Endereço fixo do arquivo de versão. Por padrão aponta para o update.json da
         // última Release do GitHub (troque OziasFilipe/PiperSecretaria se usar outro repositório).

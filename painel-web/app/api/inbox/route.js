@@ -1,14 +1,18 @@
-import { redis } from "../../../lib/store";
-import { json, requireUser } from "../../../lib/http";
+import { listInbox, pullInbox } from "../../../lib/data";
+import { json, requireUser, safe } from "../../../lib/http";
 
 export const dynamic = "force-dynamic";
 
-/** O app busca (e esvazia) as ações combinadas pelo painel: agendar, criar tarefa etc. */
-export async function POST(req) {
+/** Celular: busca (e marca como entregues) as ações combinadas no painel. */
+export const POST = safe(async (req) => {
   const { user, error } = await requireUser(req);
   if (error) return error;
-  const key = `inbox:${user.username}`;
-  const items = (await redis("LRANGE", key, 0, 199)) || [];
-  if (items.length) await redis("DEL", key);
-  return json({ actions: items.map((s) => { try { return JSON.parse(s); } catch { return null; } }).filter(Boolean) });
-}
+  return json({ actions: await pullInbox(user.username, user.device) });
+});
+
+/** Painel: lista o que está aguardando o celular e o que já foi entregue. */
+export const GET = safe(async (req) => {
+  const { user, error } = await requireUser(req);
+  if (error) return error;
+  return json({ items: await listInbox(user.username) });
+});

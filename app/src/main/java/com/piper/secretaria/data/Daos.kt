@@ -46,6 +46,10 @@ interface EventDao {
     @Query("SELECT * FROM events WHERE externalId IS NOT NULL")
     suspend fun external(): List<EventEntity>
 
+    /** Para o painel web: compromissos a partir de [from] (o painel mostra até 30 dias para trás). */
+    @Query("SELECT * FROM events WHERE startAt >= :from ORDER BY startAt LIMIT 1500")
+    suspend fun since(from: Long): List<EventEntity>
+
     @Insert suspend fun insert(event: EventEntity): Long
     @Update suspend fun update(event: EventEntity)
     @Delete suspend fun delete(event: EventEntity)
@@ -55,6 +59,9 @@ interface EventDao {
 interface NoteDao {
     @Query("SELECT * FROM notes ORDER BY createdAt DESC")
     fun observeAll(): Flow<List<NoteEntity>>
+
+    @Query("SELECT * FROM notes ORDER BY createdAt DESC LIMIT 500")
+    suspend fun all(): List<NoteEntity>
 
     @Insert suspend fun insert(note: NoteEntity): Long
     @Delete suspend fun delete(note: NoteEntity)

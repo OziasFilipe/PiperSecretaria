@@ -49,6 +49,11 @@ class PanelClient(private val baseUrlProvider: () -> String, private val tokenPr
         request("POST", base() + "/api/inbox", JSONObject(), tokenProvider()).optJSONArray("actions") ?: JSONArray()
     }
 
+    /** Envia a "foto" da agenda, tarefas e anotações para o painel (Supabase). */
+    suspend fun pushSnapshot(snapshot: JSONObject): JSONObject = withContext(Dispatchers.IO) {
+        request("PUT", base() + "/api/sync", snapshot, tokenProvider(), readTimeout = 30_000)
+    }
+
     private fun request(method: String, url: String, body: JSONObject?, token: String?, readTimeout: Int = 20_000): JSONObject {
         if (!url.startsWith("https://")) throw PanelException("O endereço do painel precisa começar com https://")
         val conn = (URL(url).openConnection() as HttpURLConnection).apply {

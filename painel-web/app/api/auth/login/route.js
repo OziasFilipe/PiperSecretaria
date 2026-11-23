@@ -1,15 +1,14 @@
 import { storeConfigured } from "../../../../lib/store";
 import {
   clientIp, createSession, ensureSeed, getUser, normalizeUser, publicUser,
-  registerFailure, tooManyAttempts, verifyPassword,
+  registerFailure, tooManyAttempts, touchLogin, verifyPassword,
 } from "../../../../lib/auth";
-import { setJson } from "../../../../lib/store";
-import { json } from "../../../../lib/http";
+import { json, NOT_CONFIGURED, safe } from "../../../../lib/http";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(req) {
-  if (!storeConfigured()) return json({ error: "Banco de dados não configurado na Vercel (Upstash Redis)." }, 503);
+export const POST = safe(async (req) => {
+  if (!storeConfigured()) return json({ error: NOT_CONFIGURED }, 503);
   await ensureSeed();
   const body = await req.json().catch(() => ({}));
   const username = normalizeUser(body.username);
@@ -25,6 +24,6 @@ export async function POST(req) {
     return json({ error: "Usuário ou senha incorretos." }, 401);
   }
   const token = await createSession(user.username, String(body.device || "").slice(0, 80));
-  await setJson(`user:${user.username}`, { ...user, lastLogin: Date.now() });
+  await touchLogin(user.username);
   return json({ token, user: publicUser({ ...user, lastLogin: Date.now() }), chatgpt: Boolean(process.env.OPENAI_API_KEY) });
-}
+});

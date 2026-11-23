@@ -18,10 +18,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 
 data class ChatMessage(val fromUser: Boolean, val text: String, val id: Long = System.nanoTime())
 
+@OptIn(kotlinx.coroutines.FlowPreview::class)
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val piper = app.piper
     private val repo = piper.repository
@@ -174,12 +178,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         try {
             val me = piper.panel.me()
             piper.settings.update { it.copy(chatGptEnabled = me.optBoolean("chatgpt")) }
-            val inbox = piper.panel.pullInbox()
-            var applied = 0
-            for (i in 0 until inbox.length()) if (assistant.applyAction(inbox.getJSONObject(i))) applied++
-            if (applied > 0) {
-                repo.log("Painel web", "$applied item(ns) combinados no painel foram aplicados.", com.piper.secretaria.data.NotificationCategory.SISTEMA)
-            }
+            applyInbox()
             val remote = piper.panel.getMemory()
             val local = repo.allMemories()
             val known = local.map { it.text.lowercase() to it.cue }.toSet()
@@ -192,8 +191,84 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             pushMemory()
+            pushSnapshot()
         } catch (e: com.piper.secretaria.cloud.PanelException) {
             if (e.unauthorized) piper.settings.update { it.copy(sessionToken = "") }
+        }
+    }
+
+    // --- Sincronização com o painel web (Supabase) ---
+    private val syncLock = kotlinx.coroutines.sync.Mutex()
+    private var pollJob: kotlinx.coroutines.Job? = null
+
+    /** Busca no painel o que foi combinado lá (agendar, criar tarefa…) e aplica no celular. */
+    private suspend fun applyInbox(): Int = syncLock.withLock {
+        val inbox = piper.panel.pullInbox()
+        var applied = 0
+        for (i in 0 until inbox.length()) if (assistant.applyAction(inbox.getJSONObject(i))) applied++
+        if (applied > 0) {
+            repo.log("Painel web", "$applied item(ns) combinados no painel foram aplicados.", com.piper.secretaria.data.NotificationCategory.SISTEMA)
+        }
+        applied
+    }
+
+    /** Envia a agenda, as tarefas e as anotações para o painel acompanhar pelo navegador. */
+    private suspend fun pushSnapshot() {
+        if (!settings.value.loggedIn) return
+        runCatching {
+            val from = System.currentTimeMillis() - 30L * 86_400_000L
+            val events = org.json.JSONArray()
+            repo.eventsSince(from).forEach { e ->
+                events.put(
+                    org.json.JSONObject().put("id", e.id).put("title", e.title).put("description", e.description)
+                        .put("startAt", e.startAt).put("durationMinutes", e.durationMinutes).put("type", e.type.name)
+                        .put("reminderMinutes", e.reminderMinutes).put("source", e.source ?: org.json.JSONObject.NULL),
+                )
+            }
+            val tasks = org.json.JSONArray()
+            repo.allTasks().forEach { t ->
+                tasks.put(
+                    org.json.JSONObject().put("id", t.id).put("title", t.title).put("notes", t.notes)
+                        .put("remindAt", t.remindAt ?: org.json.JSONObject.NULL).put("starred", t.starred).put("done", t.done)
+                        .put("createdAt", t.createdAt).put("completedAt", t.completedAt ?: org.json.JSONObject.NULL),
+                )
+            }
+            val notes = org.json.JSONArray()
+            repo.allNotes().forEach { n -> notes.put(org.json.JSONObject().put("id", n.id).put("text", n.text).put("createdAt", n.createdAt)) }
+            piper.panel.pushSnapshot(
+                org.json.JSONObject()
+                    .put("device", "Android ${android.os.Build.MODEL}")
+                    .put("appVersion", com.piper.secretaria.BuildConfig.VERSION_NAME)
+                    .put("events", events).put("tasks", tasks).put("notes", notes),
+            )
+        }.onFailure { e ->
+            if (e is com.piper.secretaria.cloud.PanelException && e.unauthorized) piper.settings.update { it.copy(sessionToken = "") }
+        }
+    }
+
+    /** App na frente: a cada minuto busca o que foi combinado no painel. */
+    fun onForeground() {
+        if (pollJob?.isActive == true) return
+        pollJob = viewModelScope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(60_000)
+                if (settings.value.loggedIn) runCatching { applyInbox() }
+            }
+        }
+    }
+
+    fun onBackground() {
+        pollJob?.cancel()
+        pollJob = null
+    }
+
+    init {
+        // Sempre que a agenda, as tarefas ou as anotações mudam no celular, envia para o painel (agrupa mudanças de 3 s).
+        viewModelScope.launch {
+            kotlinx.coroutines.flow.combine(repo.tasks, repo.events, repo.notes) { t, e, n -> Triple(t, e, n) }
+                .drop(1)
+                .debounce(3_000)
+                .collect { pushSnapshot() }
         }
     }
 

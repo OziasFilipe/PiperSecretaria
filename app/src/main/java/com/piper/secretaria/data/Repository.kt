@@ -59,6 +59,9 @@ class PiperRepository(
 
     suspend fun externalEvents() = db.events().external()
 
+    suspend fun eventsSince(from: Long) = db.events().since(from)
+    suspend fun allNotes() = db.notes().all()
+
     suspend fun eventsOn(day: LocalDate): List<EventEntity> =
         db.events().between(Dates.startOfDay(day), Dates.startOfDay(day.plusDays(1)))
 
