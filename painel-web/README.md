@@ -34,15 +34,25 @@ Painel da Piper para publicar na **Vercel**, com os dados guardados no **Supabas
    - a chave **service_role** (secreta). Não use a chave `anon`.
 
 ### 2. Vercel
-1. Em vercel.com: **Add New › Project › Import** o repositório.
-   Em **Root Directory** escolha a pasta do painel (`painel-web`, ou `PiperSecretaria/painel-web` se o repositório for o `epiperEcommerce`).
-   Framework: Next.js (detectado sozinho).
-2. Em **Settings › Environment Variables** adicione:
+1. Em vercel.com: **Add New › Project › Import** o repositório `PiperSecretaria`.
+   **Não mexa em Root Directory nem em Framework**: deixe como a Vercel sugerir (raiz `./`).
+   O arquivo [`vercel.json`](../vercel.json) na raiz do repositório já diz à Vercel que o painel é o Next.js da pasta
+   `painel-web` e manda todos os endereços (`/`, `/api/...`) para ele.
+   Durante o build aparece o aviso "Due to `builds` existing in your configuration file...": é esperado, pode ignorar.
+2. Ainda na tela de importação, abra **Environment Variables** e adicione (os nomes estão em [`.env.example`](.env.example)):
    - `SUPABASE_URL`: o Project URL.
    - `SUPABASE_SERVICE_ROLE_KEY`: a chave service_role.
    - `ADMIN_USER`: seu usuário (ex.: `ozias`).
    - `ADMIN_PASSWORD`: sua senha (vira hash no primeiro acesso; nunca fica no código).
    - `OPENAI_API_KEY` (opcional): para conversar com o ChatGPT. `OPENAI_MODEL` (opcional), padrão `gpt-4o-mini`.
+   Se o projeto já existir, elas ficam em **Settings › Environment Variables** (depois de mudar, faça **Redeploy**).
+
+Daí em diante, cada push na `main` publica sozinho.
+
+Se você já tinha criado o projeto na Vercel com **Root Directory** = `painel-web`, também funciona: nesse caso a Vercel
+ignora o `vercel.json` da raiz e usa a pasta escolhida. Para usar o jeito automático, apague o campo em
+**Settings › Build and Deployment › Root Directory** (deixe vazio) e faça **Redeploy**.
+
 3. **Deploy**. Abra o endereço (ex.: `https://piper-painel.vercel.app`) e entre.
    Na aba **Conexão** aparece "Banco de dados (Supabase): ok ✓" quando está tudo certo.
 4. No celular, na tela de login da Piper, use esse mesmo endereço, seu usuário e senha.
